@@ -250,35 +250,55 @@ def log_question(user_id: str, username: str, question: str, answer: str, durati
         f.write(json.dumps(entry) + "\n")
 
 
+def _format_query_results(result, description, max_rows: int = 50) -> str:
+    """Format DuckDB query results as readable text."""
+    if not result:
+        return "No results found."
+    columns = [desc[0] for desc in description]
+    lines = [" | ".join(columns)]
+    lines.append("-" * len(lines[0]))
+    for row in result[:max_rows]:
+        lines.append(" | ".join(str(v) for v in row))
+    if len(result) > max_rows:
+        lines.append(f"... ({len(result)} total rows, showing first {max_rows})")
+    return "\n".join(lines)
+
+
 def run_duckdb_query(sql: str, max_retries: int = 8) -> str:
     """Execute a read-only DuckDB query and return results as string.
     
-    Retries aggressively on lock/busy errors since the scraper write
-    to tpcr_live.duckdb typically finishes in under 1 second.
+    Parquet queries (read_parquet) use an in-memory connection to avoid
+    lock contention with the scraper. DuckDB table queries connect to the
+    shared file and retry on lock/busy errors.
     """
     import time
+
+    uses_parquet = "read_parquet" in sql.lower()
+
+    if uses_parquet:
+        con = None
+        try:
+            con = duckdb.connect()
+            result = con.execute(sql).fetchall()
+            desc = con.description
+            con.close()
+            return _format_query_results(result, desc)
+        except Exception as e:
+            if con:
+                try:
+                    con.close()
+                except Exception:
+                    pass
+            return f"No results found. (Query issue: {str(e)[:200]})"
 
     for attempt in range(max_retries):
         con = None
         try:
             con = duckdb.connect(DUCKDB_PATH, read_only=True)
             result = con.execute(sql).fetchall()
-            columns = [desc[0] for desc in con.description]
+            desc = con.description
             con.close()
-
-            if not result:
-                return "No results found."
-
-            # Format as readable text (not full table — keep it compact)
-            lines = [" | ".join(columns)]
-            lines.append("-" * len(lines[0]))
-            for row in result[:50]:  # Cap at 50 rows
-                lines.append(" | ".join(str(v) for v in row))
-
-            if len(result) > 50:
-                lines.append(f"... ({len(result)} total rows, showing first 50)")
-
-            return "\n".join(lines)
+            return _format_query_results(result, desc)
         except Exception as e:
             if con:
                 try:
@@ -286,13 +306,11 @@ def run_duckdb_query(sql: str, max_retries: int = 8) -> str:
                 except Exception:
                     pass
             error_str = str(e).lower()
-            # Retry on any lock, busy, or IO errors (scraper write collisions)
             is_lock_error = any(kw in error_str for kw in ("lock", "busy", "io error", "could not set", "blocked"))
             if is_lock_error and attempt < max_retries - 1:
-                time.sleep(0.5 * (attempt + 1))  # Back off: 0.5s, 1s, 1.5s, 2s, ...
+                time.sleep(0.5 * (attempt + 1))
                 continue
             if attempt < max_retries - 1:
-                # Even for non-lock errors, retry once with a brief pause
                 time.sleep(1)
                 continue
             return "I hit a temporary glitch querying the data — please try your question again in a moment. If it keeps happening, let us know in #feedback!"
