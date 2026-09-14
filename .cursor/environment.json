@@ -1,0 +1,17 @@
+{
+  "name": "Theme Park Crowd Report",
+  "user": "ubuntu",
+  "install": "sudo apt-get update && sudo apt-get install -y python3.12-venv && python3 -m venv venv && ./venv/bin/pip install --upgrade pip && ./venv/bin/pip install -r requirements.txt",
+  "terminals": [
+    {
+      "name": "dashboard",
+      "command": "DEV_MODE=true ./venv/bin/python dashboard/app.py"
+    }
+  ],
+  "ports": [
+    {
+      "name": "dashboard",
+      "port": 8050
+    }
+  ]
+}
