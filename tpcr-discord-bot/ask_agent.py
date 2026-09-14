@@ -328,7 +328,7 @@ async def ask_agent(question: str, user_id: str, api_key: str, username: str = "
     # Allow up to 5 tool-use rounds
     for _ in range(5):
         response = await client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1500,
             system=system_prompt,
             tools=tools,

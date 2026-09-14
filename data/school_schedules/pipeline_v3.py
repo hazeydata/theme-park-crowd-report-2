@@ -402,7 +402,7 @@ class DistrictProcessor:
         )
         
         payload = json.dumps({
-            "model": "claude-sonnet-4-20250514",
+            "model": "claude-sonnet-4-6",
             "max_tokens": 800,  # Increased for longer non_school_days array
             "messages": [{"role": "user", "content": prompt}]
         }).encode()
