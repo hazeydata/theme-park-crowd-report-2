@@ -1,8 +1,14 @@
 #!/bin/bash
 # install_daily_report_cron.sh — Install daily crowd report cron job
 #
+# Run on: wilma-server (daily_report.py reads /mnt/data/pipeline/tpcr_live.duckdb)
+# NOT the Mac Mini — the Mini has no pipeline data paths.
+#
 # Adds a cron job that runs tpcr-discord-bot/daily_report.py once per day.
 # Posts the daily crowd report to #crowd-reports after the pipeline finishes.
+#
+# This is separate from the live bot (bot.py / systemd tpcr-discord-bot service)
+# which handles slash commands and runs continuously.
 #
 # Schedule: 11:00 AM ET (after the 6–8 AM pipeline window completes)
 # Matches the schedule in docs/TPCR_CUSTOMER_SERVICE_DESIGN_SPEC.md Domain 4.

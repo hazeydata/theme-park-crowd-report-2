@@ -54,10 +54,12 @@ Single reference for the current Theme Park pipeline setup (Linux, user **fred**
 
 - **What:** Posts the daily crowd report embed to Discord `#crowd-reports` (channel `1478240066382860298`). Reads WTI from DuckDB/parquet, runs a quality gate (pipeline freshness, all 4 WDW parks have data, bounds check), and posts if all checks pass.
 - **Script:** `tpcr-discord-bot/daily_report.py`
+- **Host:** **wilma-server** (reads `/mnt/data/pipeline/tpcr_live.duckdb`; NOT the Mac Mini).
 - **Schedule:** Daily at 11:00 AM ET (after the 6–8 AM pipeline window completes).
-- **Install:** `bash scripts/install_daily_report_cron.sh`
+- **Install:** `bash scripts/install_daily_report_cron.sh` (run on wilma-server)
 - **Log:** `output_base/logs/daily_report.log`
 - **Quality gate:** If the pipeline hasn't produced fresh data (>26h stale) or WTI data is missing/out-of-bounds, the post is skipped. A missing report is better than a broken one.
+- **Not the live bot:** The interactive Discord bot (`bot.py`, systemd service `tpcr-discord-bot`) is a separate long-running process that handles slash commands.
 
 ### 3.4 Docs check (cron, hourly, survives reboot)
 

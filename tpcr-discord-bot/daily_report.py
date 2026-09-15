@@ -1,6 +1,12 @@
 """
 Daily Crowd Report — Posts to #crowd-reports every morning.
 
+This is a standalone scheduled job, NOT part of the live bot (bot.py).
+The live bot handles slash commands (/today, /crowd, /best-day, etc.)
+and runs as the tpcr-discord-bot systemd service. This script runs once
+via cron to post the daily embed.
+
+Host:     wilma-server (reads /mnt/data/pipeline/tpcr_live.duckdb)
 Schedule: 11:00 AM ET daily (after 6–8 AM pipeline window).
 Install:  bash scripts/install_daily_report_cron.sh
 """
