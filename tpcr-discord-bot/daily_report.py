@@ -3,6 +3,7 @@ Daily Crowd Report — Posts to #crowd-reports every morning.
 Run via cron at 7:00 AM EST.
 """
 
+import argparse
 import os
 import requests
 import duckdb
@@ -131,27 +132,53 @@ def get_embed_color(wti: float) -> int:
     else: return 0x50001E
 
 
+def _read_wti_parquet(wti_code: str, target_date: date):
+    """Read WTI from the parquet file (fallback path)."""
+    r = duckdb.sql(f"""
+        SELECT wti FROM read_parquet('{WTI_PATH}')
+        WHERE park_code = '{wti_code}' AND park_date = '{target_date}'
+        LIMIT 1
+    """).fetchone()
+    return float(r[0]) if r else None
+
+
 def get_wti(park_code: str, target_date: date) -> float:
     wti_code = WTI_CODE_MAP.get(park_code, park_code)
-    try:
-        if _USE_DUCKDB:
+
+    if _USE_DUCKDB:
+        try:
             con = duckdb.connect(DUCKDB_PATH, read_only=True)
-            r = con.execute("SELECT wti FROM wti WHERE park_code = ? AND park_date = ? LIMIT 1",
-                           [wti_code, target_date]).fetchone()
+            r = con.execute(
+                "SELECT wti FROM wti WHERE park_code = ? AND park_date = ? LIMIT 1",
+                [wti_code, target_date],
+            ).fetchone()
             con.close()
-            return float(r[0]) if r else None
-        r = duckdb.sql(f"""
-            SELECT wti FROM read_parquet('{WTI_PATH}')
-            WHERE park_code = '{wti_code}' AND park_date = '{target_date}'
-            LIMIT 1
-        """).fetchone()
-        return float(r[0]) if r else None
-    except:
+            if r:
+                return float(r[0])
+        except Exception:
+            pass
+        # DuckDB had no row or errored — fall back to parquet
+        try:
+            return _read_wti_parquet(wti_code, target_date)
+        except Exception:
+            return None
+
+    try:
+        return _read_wti_parquet(wti_code, target_date)
+    except Exception:
         return None
 
 
 def main():
-    today = date.today()
+    parser = argparse.ArgumentParser(description="Daily Crowd Report")
+    parser.add_argument(
+        "--date",
+        type=lambda s: date.fromisoformat(s),
+        default=None,
+        help="Target date in YYYY-MM-DD format (default: today)",
+    )
+    args = parser.parse_args()
+    today = args.date or date.today()
     date_display = today.strftime("%A, %B %d, %Y")
 
     park_groups = [
