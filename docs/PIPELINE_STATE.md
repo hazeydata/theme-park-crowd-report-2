@@ -50,7 +50,16 @@ Single reference for the current Theme Park pipeline setup (Linux, user **fred**
 - **Log (systemd):** `sudo journalctl -u queue-times-loop -f`
   Optional file log: `output_base/logs/queue_times_loop.log` if started manually with redirect.
 
-### 3.3 Docs check (cron, hourly, survives reboot)
+### 3.3 Daily crowd report (cron, 11:00 AM ET)
+
+- **What:** Posts the daily crowd report embed to Discord `#crowd-reports` (channel `1478240066382860298`). Reads WTI from DuckDB/parquet, runs a quality gate (pipeline freshness, all 4 WDW parks have data, bounds check), and posts if all checks pass.
+- **Script:** `tpcr-discord-bot/daily_report.py`
+- **Schedule:** Daily at 11:00 AM ET (after the 6–8 AM pipeline window completes).
+- **Install:** `bash scripts/install_daily_report_cron.sh`
+- **Log:** `output_base/logs/daily_report.log`
+- **Quality gate:** If the pipeline hasn't produced fresh data (>26h stale) or WTI data is missing/out-of-bounds, the post is skipped. A missing report is better than a broken one.
+
+### 3.4 Docs check (cron, hourly, survives reboot)
 
 - **What:** Pulls latest from git, checks WILMA-BAMBAM.md Active Items for changes. Logs when new instructions detected.
 - **Script:** `scripts/check_docs_for_instructions.sh`
@@ -101,6 +110,26 @@ bash scripts/install_cron.sh --remove
 
 # Preview what would be installed
 bash scripts/install_cron.sh --show
+```
+
+### Daily crowd report (cron, 11 AM ET)
+
+```bash
+# Install daily crowd report cron job
+bash scripts/install_daily_report_cron.sh
+
+# Preview
+bash scripts/install_daily_report_cron.sh --show
+
+# Remove
+bash scripts/install_daily_report_cron.sh --remove
+
+# Manual run (for testing — does NOT post if quality gate fails)
+cd /home/wilma/theme-park-crowd-report
+.venv/bin/python tpcr-discord-bot/daily_report.py
+
+# View log
+tail -f output_base/logs/daily_report.log
 ```
 
 ### Docs check (hourly, survives reboot)

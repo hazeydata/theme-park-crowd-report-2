@@ -454,6 +454,19 @@ Install/remove cron jobs equivalent to Windows scheduled tasks.
 ./scripts/install_cron.sh --remove
 ```
 
+### `install_daily_report_cron.sh`
+
+Install or remove the daily crowd report cron job. Posts to Discord `#crowd-reports` at 11:00 AM ET after the pipeline finishes. The quality gate inside `daily_report.py` checks pipeline freshness before posting.
+
+```bash
+# Install daily crowd report cron job
+bash scripts/install_daily_report_cron.sh
+
+# Preview / remove
+bash scripts/install_daily_report_cron.sh --show
+bash scripts/install_daily_report_cron.sh --remove
+```
+
 ### `check_docs_for_instructions.sh` and `install_docs_check_cron.sh`
 
 Hourly job that pulls latest from git and checks WILMA-BAMBAM.md Active Items for changes. Logs when new instructions are detected. Cron survives reboot.
