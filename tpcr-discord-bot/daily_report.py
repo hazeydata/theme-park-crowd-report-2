@@ -1,6 +1,8 @@
 """
 Daily Crowd Report — Posts to #crowd-reports every morning.
-Run via cron at 7:00 AM EST.
+
+Schedule: 11:00 AM ET daily (after 6–8 AM pipeline window).
+Install:  bash scripts/install_daily_report_cron.sh
 """
 
 import os
@@ -43,18 +45,20 @@ def quality_gate(park_groups, get_wti_fn, today) -> tuple[bool, str]:
     """
     # Check 1: Pipeline ran today (state file updated within 26 hours)
     try:
+        if not PIPELINE_STATE.exists():
+            return False, f"Pipeline state file missing: {PIPELINE_STATE}"
         with open(PIPELINE_STATE) as f:
             state = _json.load(f)
         fc = state.get("forecast_completed")
-        if fc:
-            fc_dt = _dt.fromisoformat(fc.replace("Z", "+00:00")) if "+" in fc or fc.endswith("Z") else _dt.fromisoformat(fc)
-            now = _dt.now(_tz.utc)
-            # Make fc_dt timezone-aware if needed
-            if fc_dt.tzinfo is None:
-                fc_dt = fc_dt.replace(tzinfo=_tz.utc)
-            age_hours = (now - fc_dt).total_seconds() / 3600
-            if age_hours > 26:
-                return False, f"Pipeline state stale ({age_hours:.0f}h old)"
+        if not fc:
+            return False, "Pipeline state has no forecast_completed timestamp"
+        fc_dt = _dt.fromisoformat(fc.replace("Z", "+00:00")) if "+" in fc or fc.endswith("Z") else _dt.fromisoformat(fc)
+        now = _dt.now(_tz.utc)
+        if fc_dt.tzinfo is None:
+            fc_dt = fc_dt.replace(tzinfo=_tz.utc)
+        age_hours = (now - fc_dt).total_seconds() / 3600
+        if age_hours > 26:
+            return False, f"Pipeline state stale ({age_hours:.0f}h old)"
     except Exception as e:
         return False, f"Pipeline state check failed: {e}"
 
